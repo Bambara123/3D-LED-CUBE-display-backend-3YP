@@ -1,3 +1,5 @@
+// routes/ObjectFile.js
+
 const path = require("path");
 const multer = require("multer");
 const fs = require("fs").promises; // Import the 'fs' module for file system operations
@@ -17,9 +19,9 @@ const upload = multer({
 const router = express.Router();
 
 // Function to call Python script
-function callPythonScript(filePath) {
+function callPythonScript(filePath, email) {
   return new Promise((resolve, reject) => {
-    const python = spawn("python", ["./python/script2.py", filePath]);
+    const python = spawn("python3", ["./python/script2.py", filePath, email]);
 
     python.on("close", (code) => {
       resolve();
@@ -37,6 +39,11 @@ router.post("/upload", upload.single("fileContent"), async (req, res, next) => {
   try {
     const { email } = req.body;
 
+    console.log("email", email);
+
+    const idForFile = email.replace(/[^a-zA-Z]/g, "");
+    console.log(idForFile);
+
     // Validate email
     if (!validator.isEmail(email)) {
       return res.status(400).json({ error: "Invalid email address" });
@@ -48,16 +55,18 @@ router.post("/upload", upload.single("fileContent"), async (req, res, next) => {
       "..",
       "python",
       "input",
-      req.file.originalname
+      idForFile + ".obj"
     );
     await fs.writeFile(filePath1, req.file.buffer);
 
     console.log(filePath1);
 
     // Call the Python script with the path of the file as an argument
-    await callPythonScript("./python/input/mug.obj");
 
-    const fileName = "common_matrix.npy";
+    const pathForObj = "./python/input/" + idForFile + ".obj";
+    await callPythonScript(pathForObj, idForFile);
+
+    const fileName = idForFile + ".hex";
     const filePath = path.join(__dirname, "..", fileName); // Specify your folder name
     // Specify your file name
     console.log(filePath);
@@ -65,7 +74,8 @@ router.post("/upload", upload.single("fileContent"), async (req, res, next) => {
     // Read the content of the file from the specified folder
     const fileContent = await fs.readFile(filePath);
 
-    console.log("File content:", fileContent);
+    // console.log("File content:", fileContent);
+    // console.log("File content:", fileContent.toString());
 
     // Save to database
     const objectFile = new ObjectFile({ email, fileContent: fileContent });
