@@ -1,6 +1,5 @@
 const express = require("express");
 const User = require("../models/User");
-const { cookieStorageManager } = require("@chakra-ui/react");
 
 const router = express.Router();
 
